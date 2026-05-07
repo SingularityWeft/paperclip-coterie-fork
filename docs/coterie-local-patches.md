@@ -36,3 +36,19 @@ Weekly:
 5. Run focused checks for the touched package before deploying to the local Paperclip runtime.
 
 Use `scripts/coterie-maintenance-check.sh` for the read-only status check.
+
+## Runtime Deploy Rule
+
+Deploying a fork patch into the local `aiuser` Paperclip runtime is separate from merging the fork branch.
+
+Before any runtime deploy:
+
+1. Follow `/Users/bmini/Developer/SecondBrain-Claude/ops/sop-paperclip-runtime-fixes.md`.
+2. Create a fresh Paperclip backup.
+3. Record the backup timestamp.
+4. Deploy only through an idempotent script in `/Users/bmini/Developer/paperclip-tailnet-hardened/scripts/`.
+5. Verify `http://127.0.0.1:3100/api/health`.
+6. Verify the delivered `/assets/index-*.js` bundle contains stable fix markers.
+7. Reload the target route in the browser and record the result.
+
+Do not treat `/Users/aiuser/agents/paperclip` as the canonical patch history.
