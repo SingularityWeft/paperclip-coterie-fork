@@ -22,6 +22,8 @@ const PADDING = 60;
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 2;
 const TOUCH_MOVE_THRESHOLD = 6;
+const FIT_PADDING = 40;
+const MIN_CONTAINER_SIZE = 40;
 
 // ── Tree layout types ───────────────────────────────────────────────────
 
@@ -136,6 +138,22 @@ function clampZoom(value: number): number {
   return Math.min(Math.max(value, MIN_ZOOM), MAX_ZOOM);
 }
 
+function getFitTransform(containerW: number, containerH: number, bounds: { width: number; height: number }) {
+  const scaleX = Math.max(containerW - FIT_PADDING, 1) / bounds.width;
+  const scaleY = Math.max(containerH - FIT_PADDING, 1) / bounds.height;
+  const fitZoom = Math.min(scaleX, scaleY, 1);
+  const chartW = bounds.width * fitZoom;
+  const chartH = bounds.height * fitZoom;
+
+  return {
+    zoom: fitZoom,
+    pan: {
+      x: (containerW - chartW) / 2,
+      y: (containerH - chartH) / 2,
+    },
+  };
+}
+
 function touchPoint(touch: React.Touch): Point {
   return { x: touch.clientX, y: touch.clientY };
 }
@@ -239,30 +257,56 @@ export function OrgChart() {
     };
   }, []);
 
-  // Center the chart on first load
-  const hasInitialized = useRef(false);
-  useEffect(() => {
-    if (hasInitialized.current || allNodes.length === 0 || !containerRef.current) return;
-    hasInitialized.current = true;
-
+  const fitChartToContainer = useCallback(() => {
     const container = containerRef.current;
+    if (!container) return false;
+
     const containerW = container.clientWidth;
     const containerH = container.clientHeight;
+    if (containerW <= MIN_CONTAINER_SIZE || containerH <= MIN_CONTAINER_SIZE) return false;
 
-    // Fit chart to container
-    const scaleX = (containerW - 40) / bounds.width;
-    const scaleY = (containerH - 40) / bounds.height;
-    const fitZoom = Math.min(scaleX, scaleY, 1);
+    const nextTransform = getFitTransform(containerW, containerH, bounds);
+    setZoom(nextTransform.zoom);
+    setPan(nextTransform.pan);
+    return true;
+  }, [bounds]);
 
-    const chartW = bounds.width * fitZoom;
-    const chartH = bounds.height * fitZoom;
+  // Center the chart once the viewport has real dimensions.
+  const initializedLayoutKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (allNodes.length === 0 || !containerRef.current) return;
 
-    setZoom(fitZoom);
-    setPan({
-      x: (containerW - chartW) / 2,
-      y: (containerH - chartH) / 2,
-    });
-  }, [allNodes, bounds]);
+    const container = containerRef.current;
+    const layoutKey = `${selectedCompanyId ?? ""}:${allNodes.length}:${bounds.width}:${bounds.height}`;
+    if (
+      initializedLayoutKey.current === layoutKey &&
+      container.clientWidth > MIN_CONTAINER_SIZE &&
+      container.clientHeight > MIN_CONTAINER_SIZE
+    ) {
+      return;
+    }
+
+    const tryFit = () => {
+      if (fitChartToContainer()) {
+        initializedLayoutKey.current = layoutKey;
+      }
+    };
+
+    tryFit();
+    if (typeof ResizeObserver === "undefined") {
+      const timeoutId = window.setTimeout(tryFit, 0);
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    const resizeObserver = new ResizeObserver(tryFit);
+    resizeObserver.observe(container);
+    const animationFrameId = window.requestAnimationFrame(tryFit);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [allNodes.length, bounds.height, bounds.width, fitChartToContainer, selectedCompanyId]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -316,17 +360,8 @@ export function OrgChart() {
   }, [zoom, pan]);
 
   const fitToScreen = useCallback(() => {
-    if (!containerRef.current) return;
-    const cW = containerRef.current.clientWidth;
-    const cH = containerRef.current.clientHeight;
-    const scaleX = (cW - 40) / bounds.width;
-    const scaleY = (cH - 40) / bounds.height;
-    const fitZoom = Math.min(scaleX, scaleY, 1);
-    const chartW = bounds.width * fitZoom;
-    const chartH = bounds.height * fitZoom;
-    setZoom(fitZoom);
-    setPan({ x: (cW - chartW) / 2, y: (cH - chartH) / 2 });
-  }, [bounds]);
+    fitChartToContainer();
+  }, [fitChartToContainer]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     if (e.touches.length >= 2 && containerRef.current) {
@@ -459,7 +494,7 @@ export function OrgChart() {
       <div
         ref={containerRef}
         data-testid="org-chart-viewport"
-        className="w-full flex-1 min-h-0 overflow-hidden relative bg-muted/20 border border-border rounded-lg"
+        className="w-full flex-1 min-h-[320px] overflow-hidden relative bg-muted/20 border border-border rounded-lg sm:min-h-[420px] md:min-h-0"
         style={{
           cursor: dragging ? "grabbing" : "grab",
           touchAction: "none",
