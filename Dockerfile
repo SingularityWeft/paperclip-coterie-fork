@@ -33,7 +33,7 @@ COPY packages/adapters/openclaw-gateway/package.json packages/adapters/openclaw-
 COPY packages/adapters/opencode-local/package.json packages/adapters/opencode-local/
 COPY packages/adapters/pi-local/package.json packages/adapters/pi-local/
 COPY packages/plugins/sdk/package.json packages/plugins/sdk/
-COPY --parents packages/plugins/sandbox-providers/./*/package.json packages/plugins/sandbox-providers/
+# Removed locally: current checkout has no packages/plugins/sandbox-providers/*/package.json
 COPY packages/plugins/paperclip-plugin-fake-sandbox/package.json packages/plugins/paperclip-plugin-fake-sandbox/
 COPY packages/plugins/plugin-llm-wiki/package.json packages/plugins/plugin-llm-wiki/
 COPY packages/plugins/plugin-workspace-diff/package.json packages/plugins/plugin-workspace-diff/
@@ -58,10 +58,19 @@ WORKDIR /app
 COPY --chown=node:node --from=build /app /app
 RUN npm install --global --omit=dev @anthropic-ai/claude-code@latest @openai/codex@latest opencode-ai \
   && apt-get update \
-  && apt-get install -y --no-install-recommends openssh-client jq \
+  && apt-get install -y --no-install-recommends openssh-client jq python3-venv python3-pip \
   && rm -rf /var/lib/apt/lists/* \
   && mkdir -p /paperclip \
   && chown node:node /paperclip
+
+# Hermes Agent — installed in dedicated venv, symlinked onto PATH (Coterie addition)
+COPY .docker-build/hermes-src.tar.gz /tmp/hermes-src.tar.gz
+RUN mkdir -p /opt/hermes-src \
+  && tar -xzf /tmp/hermes-src.tar.gz -C /opt/hermes-src \
+  && python3 -m venv /opt/hermes-venv \
+  && /opt/hermes-venv/bin/pip install --no-cache-dir --quiet /opt/hermes-src \
+  && ln -s /opt/hermes-venv/bin/hermes /usr/local/bin/hermes \
+  && rm /tmp/hermes-src.tar.gz
 
 COPY scripts/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
