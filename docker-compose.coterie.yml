@@ -1,0 +1,77 @@
+# Paperclip — Coterie of the Cusp deployment
+# Business-Orchestrierungsschicht über dem OpenClaw Agent-Stack
+# Isolation: eigenes Netz, eigene Postgres (kein Host-Port), Server auf 3100
+
+services:
+  paperclip-db:
+    image: postgres:17-alpine
+    container_name: paperclip-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: paperclip
+      POSTGRES_PASSWORD: ${PAPERCLIP_DB_PASSWORD}
+      POSTGRES_DB: paperclip
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperclip -d paperclip"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - paperclip-pgdata:/var/lib/postgresql/data
+    networks:
+      - paperclip-internal
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+    # Kein Host-Port — kein Konflikt mit coterie-postgres (5432)
+
+  paperclip-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: paperclip-server
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"    # UI + API — nur localhost
+    environment:
+      DATABASE_URL: postgres://paperclip:${PAPERCLIP_DB_PASSWORD}@paperclip-db:5432/paperclip
+      PORT: "3100"
+      SERVE_UI: "true"
+      PAPERCLIP_DEPLOYMENT_MODE: "authenticated"
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: "private"
+      PAPERCLIP_PUBLIC_URL: "${PAPERCLIP_PUBLIC_URL:-http://localhost:3100}"
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET}"
+      PAPERCLIP_AUTH_DISABLE_SIGN_UP: "true"
+      PAPERCLIP_SECRETS_STRICT_MODE: "true"
+      PAPERCLIP_TELEMETRY_DISABLED: "1"
+      DO_NOT_TRACK: "1"
+      # OpenClaw Gateway — Coterie Agent-Layer
+      OPENCLAW_GATEWAY_URL: "ws://host.docker.internal:18789"
+    volumes:
+      - paperclip-data:/paperclip
+      # SecondBrain-Claude lesend einhängen — Quelle für Portfolio Triage (MMO-2)
+      - /Users/aiuser/agents/openclaw/workspaces/pbm-fit-coach/knowledge/secondbrain:/paperclip/secondbrain:ro
+    networks:
+      - paperclip-internal
+    depends_on:
+      paperclip-db:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+
+networks:
+  paperclip-internal:
+    driver: bridge
+
+volumes:
+  paperclip-pgdata:
+  paperclip-data:

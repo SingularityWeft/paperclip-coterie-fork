@@ -66,3 +66,7 @@ tests/storybook-visual/playwright-report/
 .superpowers/
 .claude/worktrees/
 .herenow
+
+# Coterie additions
+.docker-build/
+*.bak.*
