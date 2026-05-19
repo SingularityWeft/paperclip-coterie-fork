@@ -7,7 +7,7 @@ export const SANDBOX_INSTALL_COMMAND = "npm install -g @openai/codex";
 
 export const DEFAULT_CODEX_LOCAL_MODEL = "gpt-5.3-codex";
 export const DEFAULT_CODEX_LOCAL_BYPASS_APPROVALS_AND_SANDBOX = true;
-export const CODEX_LOCAL_FAST_MODE_SUPPORTED_MODELS = ["gpt-5.4"] as const;
+export const CODEX_LOCAL_FAST_MODE_SUPPORTED_MODELS = ["gpt-5.5", "gpt-5.4"] as const;
 
 function normalizeModelId(model: string | null | undefined): string {
   return typeof model === "string" ? model.trim() : "";
@@ -33,6 +33,7 @@ export function isCodexLocalFastModeSupported(model: string | null | undefined):
 }
 
 export const models = [
+  { id: "gpt-5.5", label: "gpt-5.5" },
   { id: "gpt-5.4", label: "gpt-5.4" },
   { id: DEFAULT_CODEX_LOCAL_MODEL, label: DEFAULT_CODEX_LOCAL_MODEL },
   { id: "gpt-5.3-codex-spark", label: "gpt-5.3-codex-spark" },
@@ -66,7 +67,7 @@ Adapter: codex_local
 Core fields:
 - cwd (string, optional): default absolute working directory fallback for the agent process (created if missing when possible)
 - instructionsFilePath (string, optional): absolute path to a markdown instructions file prepended to stdin prompt at runtime
-- model (string, optional): Codex model id
+- model (string, optional): Codex model id (e.g. gpt-5.5, gpt-5.4, gpt-5.3-codex)
 - modelReasoningEffort (string, optional): reasoning effort override (minimal|low|medium|high|xhigh) passed via -c model_reasoning_effort=...
 - promptTemplate (string, optional): run prompt template
 - search (boolean, optional): run codex with --search
@@ -89,6 +90,6 @@ Notes:
 - Paperclip injects desired local skills into the effective CODEX_HOME/skills/ directory at execution time so Codex can discover "$paperclip" and related skills without polluting the project working directory. In managed-home mode (the default) this is ~/.paperclip/instances/<id>/companies/<companyId>/codex-home/skills/; when CODEX_HOME is explicitly overridden in adapter config, that override is used instead.
 - Unless explicitly overridden in adapter config, Paperclip runs Codex with a per-company managed CODEX_HOME under the active Paperclip instance and seeds auth/config from the shared Codex home (the CODEX_HOME env var, when set, or ~/.codex).
 - Some model/tool combinations reject certain effort levels (for example minimal with web search enabled).
-- Fast mode is supported on GPT-5.4 and manual model IDs. When enabled for those models, Paperclip applies \`service_tier="fast"\` and \`features.fast_mode=true\`.
+- Fast mode is supported on GPT-5.5, GPT-5.4, and manual model IDs. When enabled for those models, Paperclip applies \`service_tier="fast"\` and \`features.fast_mode=true\`.
 - When Paperclip realizes a workspace/runtime for a run, it injects PAPERCLIP_WORKSPACE_* and PAPERCLIP_RUNTIME_* env vars for agent-side tooling.
 `;
