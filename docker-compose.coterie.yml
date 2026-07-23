@@ -53,7 +53,7 @@ services:
       OPENCLAW_GATEWAY_URL: "ws://host.docker.internal:18789"
     volumes:
       - paperclip-data:/paperclip
-      # SecondBrain-Claude lesend einhängen — Quelle für Portfolio Triage (MMO-2)
+      # Unified SecondBrain runtime mirror read-only for portfolio triage (MMO-2)
       - /Users/aiuser/agents/openclaw/workspaces/pbm-fit-coach/knowledge/secondbrain:/paperclip/secondbrain:ro
       # Hermes Codex OAuth — single source of truth (host-pflege; Token-Refresh sichtbar im Container)
       - /Users/aiuser/.hermes/auth.json:/paperclip/.hermes/auth.json
