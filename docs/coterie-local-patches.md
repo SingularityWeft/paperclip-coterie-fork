@@ -43,7 +43,7 @@ Deploying a fork patch into the local `aiuser` Paperclip runtime is separate fro
 
 Before any runtime deploy:
 
-1. Follow `/Users/bmini/Developer/SecondBrain-Claude/ops/sop-paperclip-runtime-fixes.md`.
+1. Follow `/Users/bmini/Developer/SecondBrain/ops/sop-paperclip-runtime-fixes.md`.
 2. Create a fresh Paperclip backup.
 3. Record the backup timestamp.
 4. Deploy only through an idempotent script in `/Users/bmini/Developer/paperclip-tailnet-hardened/scripts/`.
